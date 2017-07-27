@@ -1,0 +1,49 @@
+$license
+
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_URL
+#undef PACKAGE_VERSION
+
+#include "config.h"
+#include "global.h"
+#include "interpret.h"
+#include "module.h"
+#include "program.h"
+#include "stralloc.h"
+#include "svalue.h"
+#include "object.h"
+#include "mapping.h"
+#include "pike_types.h"
+#include "builtin_functions.h"
+
+
+DECLARATIONS
+
+PIKECLASS Module
+{
+	INIT
+	{
+
+	}
+
+	EXIT
+	{
+
+	}
+}
+
+PIKE_MODULE_INIT
+{
+	add_string_constant("__author", PACKAGE_BUGREPORT, 0);
+	add_string_constant("__version", PACKAGE_VERSION, 0);
+
+	INIT
+}
+
+PIKE_MODULE_EXIT
+{
+	EXIT
+}

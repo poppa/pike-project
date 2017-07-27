@@ -1,0 +1,8 @@
+Typically you install a Pike module like this:
+
+	pike -x module            # Compiles the module
+	pike -x module install    # Installs the module
+	
+For further options run
+
+	pike -x module --help

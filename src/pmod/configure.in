@@ -1,0 +1,4 @@
+AC_INIT([$module], [0.1], [$author], [$module_tar_name])
+AC_MODULE_INIT()
+AC_CONFIG_HEADERS($lc_module_name_config.h)
+AC_OUTPUT(Makefile)

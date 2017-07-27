@@ -1,0 +1,12 @@
+#!/usr/bin/env pike
+
+import $module;
+
+int main(int argc, array(string) argv)
+{
+  write("\nThis is \"%O %s\" by \"%s\"\n\n",
+        $module.module, __version, __author);
+
+  foreach (sort(indices($module)), string k)
+    write( "  * %s: %O\n", k, $module[k] );
+}

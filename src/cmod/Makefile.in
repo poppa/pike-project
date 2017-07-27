@@ -1,0 +1,13 @@
+@make_variables@
+VPATH=@srcdir@
+OBJS=$module_name.o
+MODDIR=$module_dir
+MODNAME=$module_name
+AUTODOC_SRC_IN=$module_name.c
+MODULE_PMOD_IN=module.pmod.in
+MODULE_LDFLAGS=@LDFLAGS@ @LIBS@ @CMOD_LIBS@
+MODULE_CFLAGS=@CMOD_CFLAGS@
+CONFIG_HEADERS=@CONFIG_HEADERS@
+@dynamic_module_makefile@
+@dependencies@
+

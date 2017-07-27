@@ -1,0 +1,11 @@
+AC_INIT([$module], [0.1], [$author])
+AC_MODULE_INIT()
+AC_CONFIG_HEADERS($lc_module_name_config.h)
+#AC_ARG_WITH($module,     [  --without-$module       Support for $module],[],[with_$module=yes])
+
+CMOD_LIBS=""
+CMOD_CFLAGS=""
+
+AC_SUBST(CMOD_CFLAGS)
+AC_SUBST(CMOD_LIBS)
+AC_OUTPUT(Makefile)
