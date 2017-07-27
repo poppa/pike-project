@@ -1,4 +1,9 @@
-#charset utf-8
+#charset utf8
+
+/*#
+  NOTE! No macros will be kept in this program when building the finished
+        program with build.pike.
+*/
 
 #define PROJ_DEBUG
 
@@ -9,16 +14,18 @@
 #endif
 
 mapping(string:string) colors = ([
-  "g"  : "1;30m", // grey
-  "lg" : "0;37m", // light grey
-  "br" : "0;33m", // brown
-  "y"  : "1;33m", // yellow
-  "w"  : "1;37m", // white
-  "p"  : "0;35m", // purple
-  "r"  : "0;31m", // red
-  "lr" : "1;31m", // light red
-  "bl" : "0;34m", // blue
-  "lb" : "1;34m", // lb
+  "g"   : "1;30m", // grey
+  "lg"  : "0;37m", // light grey
+  "br"  : "0;33m", // brown
+  "y"   : "1;33m", // yellow
+  "w"   : "1;37m", // white
+  "p"   : "0;35m", // purple
+  "r"   : "0;31m", // red
+  "lr"  : "1;31m", // light red
+  "bl"  : "0;34m", // blue
+  "lb"  : "1;34m", // lb,
+  "bld" : "1m",    // bold,
+  "gr"  : "0;32m"    // green
 ]);
 
 string opt_type;
@@ -60,6 +67,8 @@ int main(int argc, array(string) argv)
 
   mapping env = getenv();
 
+  /*# The contents of this will be kept when built */
+#ifndef AUTO_FILL
   write("  <g>You can use your <lb>up/down</lb> keys to select module type.</g>\n");
 
   while (!opt_type) {
@@ -129,11 +138,19 @@ int main(int argc, array(string) argv)
     opt_license = 0;
   }
 
+#else // AUTO_FILL
+  opt_type = "CMOD";
+  opt_author = "John Doe";
+  opt_module_name = "Yaml";
+  opt_module_path = "Parser";
+  opt_license = "MPL2.0";
+#endif // AUTO_FILL
+
   set_vars();
 
   rl->OutputController()->clear();
 
-  write("\n\n  <lg>Are these settings correct?</lg>\n\n");
+  write("\n\n  <bld>Are these settings correct?</bld>\n\n");
   write("  <g>Author:</g>      <br>%s</br>\n", vars->author);
   write("  <g>License:</g>     <br>%s</br>\n", vars->license || "None");
   write("  <g>Module Type:</g> <br>%s</br>\n", vars->type);
@@ -153,22 +170,132 @@ int main(int argc, array(string) argv)
 
   unpack();
 
+  write("\n  <gr><bld>%s</bld> Module <y>%s</y> created successfully in "
+        "<y>%s</y>.\n\n",
+        string_to_utf8("✓"),
+        vars->module,
+        vars->local_dir_name);
+
   return 0;
 }
-
 
 Regexp.PCRE.Widestring re_module_name =
   Regexp.PCRE.Widestring("^[_a-zA-Z]([_a-zA-Z0-9]+)?$");
 
+string tmpdir = ".pike-project-tmp";
+
+string tmp_path(string file)
+{
+  return combine_path(tmpdir, file);
+}
+
 void unpack()
 {
-  mkdir(".pike-project-tmp");
+  mkdir(tmpdir);
+  string package = MIME.decode_base64(PACKAGES[vars->type]);
+  package = Gz.uncompress(package);
+  Stdio.write_file(tmp_path("stub.tar"), package);
 
-  Stdio.recursive_rm(".pike-project-tmp");
+  object tar = Filesystem.Tar(tmp_path("stub.tar"));
+  string root = lower_case(vars->type);
+  tar = tar->cd(root);
+
+  void handle_files(object tar, string dir) {
+    array(string) files = tar->get_dir();
+
+    foreach (files, string file) {
+      object stat = tar->stat(file);
+
+      if (stat->isdir) {
+        mkdir(combine_path(tmpdir, dir, file));
+        handle_files(tar->cd(file), dir + "/" + file);
+      }
+      else {
+        Stdio.File fp = tar->open(file, "r");
+        string fdata = fp->read();
+        fp->close();
+        Stdio.write_file(combine_path(tmpdir, dir, file), fdata);
+      }
+    }
+  };
+
+  handle_files(tar, ".");
+
+  destruct(tar);
+  tar = 0;
+
+  rm(tmp_path("stub.tar"));
+
+  fix_files();
+
+  if (!mv(tmpdir, vars->local_dir_name)) {
+    werror("  <lr>Failed creating module directory <y>%s</y>.\n"
+           "  Make sure you have write permissons and that the directory "
+           "doesn't exist already.</lr>\n", vars->local_dir_name);
+
+    exit(1);
+  }
+}
+
+string replace_vars(string c)
+{
+  foreach (vars; string key; string v) {
+    if (v) {
+      c = replace(c, "${" + key + "}", v);
+    }
+  }
+
+  return c;
+}
+
+void fix_files()
+{
+  Stdio.write_file(tmp_path("CHANGES"), "");
+
+  if (vars->license) {
+    string lic = Gz.uncompress(MIME.decode_base64(LICENSES[vars->license]));
+    [string head, string body] = lic/"[BODY]";
+
+    Stdio.write_file(tmp_path("LICENSE"), body);
+    vars->license = replace_vars(head);
+  }
+  else {
+    vars->license = "";
+  }
+
+  void loop_dir(string dir) {
+    foreach (get_dir(dir), string file) {
+      string fp = combine_path(dir, file);
+
+      if (Stdio.is_dir(fp)) {
+        loop_dir(fp);
+      }
+      else {
+        if (file == "Module.cmod") {
+          string new = vars->module_name + ".cmod";
+          string nfp = combine_path(dir, new);
+          mv(fp, nfp);
+          file = new;
+          fp = nfp;
+        }
+
+        string c = Stdio.read_file(fp);
+        Stdio.write_file(fp, replace_vars(c));
+      }
+    }
+  };
+
+  loop_dir(tmpdir);
 }
 
 void check_perms()
 {
+#ifdef DEV
+  if (Stdio.exist(tmpdir)) {
+    Stdio.recursive_rm(tmpdir);
+  }
+#endif
+
   if (!Stdio.write_file(".pike-project-tmp", "\n")) {
     werror("<lr>No write permission to</lr> <y>%s</y>\n", getcwd());
     exit(1);

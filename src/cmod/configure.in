@@ -1,7 +1,7 @@
-AC_INIT([$module], [0.1], [$author])
+AC_INIT([${module}], [0.1], [${author}])
 AC_MODULE_INIT()
-AC_CONFIG_HEADERS($lc_module_name_config.h)
-#AC_ARG_WITH($module,     [  --without-$module       Support for $module],[],[with_$module=yes])
+AC_CONFIG_HEADERS(config.h)
+#AC_ARG_WITH(${lc_module_name},     [  --without-${lc_module_name}       Support for ${module}],[],[with_${lc_module_name}=yes])
 
 CMOD_LIBS=""
 CMOD_CFLAGS=""

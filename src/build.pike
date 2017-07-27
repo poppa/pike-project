@@ -44,11 +44,82 @@ int main(int argc, array(string) argv)
 
 void clean_prog()
 {
-  prog = replace(prog, "#define PROJ_DEBUG\n", "");
-  sscanf(prog, "%s#ifdef PROJ_DEBUG%*s#endif%s", string pre, string post);
-  prog = String.trim_all_whites(pre) + "\n\n" +
-         String.trim_all_whites(post);
-  sscanf(prog, "%s#ifdef DEV%*s#endif", prog);
+  array(string) s = Parser.Pike.split(prog);
+  array(Parser.Pike.Token) tokens = Parser.Pike.tokenize(s);
+  array(Parser.Pike.Token) new_tokens = ({});
+
+  for (int i; i < sizeof(tokens); i++) {
+    Parser.Pike.Token t = tokens[i];
+    string text = String.trim_all_whites(t->text);
+
+    if (sizeof(text)  && has_prefix(text, "/*#")) {
+      continue;
+    }
+
+    if (sizeof(text) && text[0] == '#' && text[1] != '"') {
+      string macro = (text/" ")[0];
+
+      if ((< "#if", "#ifdef", "#ifndef">)[macro]) {
+        // Keep the content of #ifndef AUTO_FILL
+        if (sscanf(text, "#ifndef%*[ ]AUTO_FILL") == 1) {
+          i += 1;
+          for (; i < sizeof(tokens); i++) {
+            text = String.trim_all_whites(tokens[i]->text);
+
+            if (has_prefix(text, "#else")) {
+              break;
+            }
+            else {
+              new_tokens += ({ tokens[i] });
+            }
+          }
+        }
+
+        i += 1;
+        for (; i < sizeof(tokens); i++) {
+          text = String.trim_all_whites(tokens[i]->text);
+
+          if (has_prefix(text, "#endif")) {
+            break;
+          }
+        }
+
+        continue;
+      }
+
+      if (macro != "#charset") {
+        continue;
+      }
+    }
+
+    new_tokens += ({ t });
+  }
+
+  array(Parser.Pike.Token) tt = ({});
+  new_tokens += ({0});
+
+  for (int i; i < sizeof(new_tokens); i++) {
+    Parser.Pike.Token t = new_tokens[i];
+    Parser.Pike.Token n = new_tokens[i+1];
+
+    if (!n) {
+      break;
+    }
+
+    string t1 = String.trim_all_whites(t->text);
+    string t2 = String.trim_all_whites(n->text);
+
+    // Consecutive only whie-space
+    if (has_value(t->text, "\n") && has_value(n->text, "\n") &&
+        !sizeof(t1) && !sizeof(t2))
+    {
+      continue;
+    }
+
+    tt += ({ t });
+  }
+
+  prog = Parser.Pike.simple_reconstitute(tt);
   prog = String.trim_all_whites(prog) + "\n";
 }
 
@@ -63,7 +134,8 @@ string make_licenses()
   array(string) chunks = ({});
   array(string) licmap = ({});
 
-  foreach (licences; string key; string f) {
+  foreach (sort(indices(licences)), string key) {
+    string f = licences[key];
     string file = combine_path(__DIR__, "licenses", f);
 
     if (Stdio.exist(file)) {
@@ -84,12 +156,13 @@ string make_packages()
   array(string) chunks = ({});
   array(string) modmap = ({});
 
-  foreach (packages; string key; string m) {
-    string tarname = m + ".tar.gz";
-    mixed r = Process.run(({ "tar", "pczf", tarname, m }));
+  foreach (sort(indices(packages)), string key) {
+    string m = packages[key];
+    string tarname = m + ".tar";
+    mixed r = Process.run(({ "tar", "pcf", tarname, m }));
 
     if (r->exitcode == 0) {
-      string fdata = MIME.encode_base64(Stdio.read_file(tarname), true);
+      string fdata = MIME.encode_base64(Gz.compress(Stdio.read_file(tarname)), true);
 
       chunks += ({ "constant PACKAGE_" + key + " = \"" + fdata + "\";" });
       modmap += ({ "  \"" + key + "\": " + "PACKAGE_" + key });

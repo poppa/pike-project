@@ -1,4 +1,6 @@
-$license
+${license}
+
+#include "global.h"
 
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME
@@ -8,7 +10,6 @@ $license
 #undef PACKAGE_VERSION
 
 #include "config.h"
-#include "global.h"
 #include "interpret.h"
 #include "module.h"
 #include "program.h"

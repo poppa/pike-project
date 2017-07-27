@@ -1,8 +1,8 @@
 @make_variables@
 VPATH=@srcdir@
 OBJS=
-MODDIR=$module_dir
-MODNAME=$module_name
+MODDIR=${module_dir}
+MODNAME=${module_name}
 AUTODOC_SRC_IN=
 MODULE_PMOD_IN=module.pmod.in
 MODULE_LDFLAGS=@LDFLAGS@ @LIBS@ @CMOD_LIBS@
