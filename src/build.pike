@@ -23,7 +23,8 @@ int main(int argc, array(string) argv)
     return 1;
   }
 
-  prog = "// NOTE: This file is partly generated, do not edit it directly!\n\n";
+  prog = "#!/usr/bin/env pike\n"
+         "// NOTE: This file is partly generated, do not edit it directly!\n\n";
   prog += Stdio.read_file("program.pike");
 
   clean_prog();
@@ -56,7 +57,7 @@ void clean_prog()
       continue;
     }
 
-    if (sizeof(text) && text[0] == '#' && text[1] != '"') {
+    if (sizeof(text) && text[0] == '#' && (text[1] != '"' && text[1] != '!')) {
       string macro = (text/" ")[0];
 
       if ((< "#if", "#ifdef", "#ifndef">)[macro]) {

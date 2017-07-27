@@ -25,7 +25,7 @@ mapping(string:string) colors = ([
   "bl"  : "0;34m", // blue
   "lb"  : "1;34m", // lb,
   "bld" : "1m",    // bold,
-  "gr"  : "0;32m"    // green
+  "gr"  : "0;32m"  // green
 ]);
 
 string opt_type;
@@ -51,19 +51,47 @@ string init_text = #"
 This utility program will help you set up a new Pike module.
 If you wish to abort this process at any time press ^C.
 
-Default values will be written in parens <lb>(default value)</lb>.
+Default values will be written in parentheses's <lb>(default value)</lb>.
 
 ";
 
 Stdio.Readline rl;
 
+constant trap_signals = ({
+  "SIGHUP",
+  "SIGINT",
+  "SIGQUIT",
+  "SIGKILL",
+  "SIGTERM",
+});
+
 int main(int argc, array(string) argv)
 {
+  foreach (trap_signals, string s) {
+    signal(signum(s), on_signal);
+  }
+
+  if (mixed e = catch(run())) {
+    if (Stdio.exist(tmpdir)) {
+      Stdio.recursive_rm(tmpdir);
+    }
+
+    werror("<lr>Error:</lr> %s \n", describe_backtrace(e));
+
+    return 1;
+  }
+
+  return 0;
+}
+
+int run()
+{
+  rl = Stdio.Readline();
+  rl->OutputController()->clear();
+
   check_perms();
 
   write(init_text);
-
-  rl = Stdio.Readline();
 
   mapping env = getenv();
 
@@ -148,7 +176,7 @@ int main(int argc, array(string) argv)
 
   set_vars();
 
-  rl->OutputController()->clear();
+  // rl->OutputController()->clear();
 
   write("\n\n  <bld>Are these settings correct?</bld>\n\n");
   write("  <g>Author:</g>      <br>%s</br>\n", vars->author);
@@ -251,6 +279,7 @@ string replace_vars(string c)
 void fix_files()
 {
   Stdio.write_file(tmp_path("CHANGES"), "");
+  Stdio.write_file(tmp_path("INSTALL"), MIME.decode_base64(INSTALL));
 
   if (vars->license) {
     string lic = Gz.uncompress(MIME.decode_base64(LICENSES[vars->license]));
@@ -332,8 +361,6 @@ void set_vars()
   if (opt_license) {
     vars->license = opt_license;
   }
-
-  // TRACE("\nvars: %O\n", vars);
 }
 
 bool verify_module_name(string n)
@@ -384,6 +411,13 @@ string prompt(string message, void|string default_value)
   }
 
   return tmp;
+}
+
+void on_signal(int s)
+{
+  Stdio.recursive_rm(tmpdir);
+  werror("\n<lr>Exiting...</lr>\n\n");
+  exit(s);
 }
 
 void write(mixed ... args)
