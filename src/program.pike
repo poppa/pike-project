@@ -1,6 +1,16 @@
 #charset utf8
 
 /*#
+  To run this program directly when developing pass the flags DEV and
+  optionally AUTO_FILL to skip the wizard. If never done before you have to
+  first run build.pike which will generate generated_constants.pike which
+  this file needs when running standalone.
+
+    pike -DDEV -DAUTO_FILL program.pike
+
+  If any changes is made to any of the stub, license or text files build.pike
+  need to be run for the changes to take effect.
+
   NOTE! No macros will be kept in this program when building the finished
         program with build.pike.
 */
