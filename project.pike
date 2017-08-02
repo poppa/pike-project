@@ -88,7 +88,7 @@ int run()
   while (!opt_type) {
     rl->enable_history(sort(indices(PACKAGES)));
 
-    opt_type = prompt("Module Type", "PMOD");
+    opt_type = prompt("Module Type", "CMOD");
 
     if (!PACKAGES[upper_case(opt_type)]) {
       write("  <lr>Unknown module type \"%s\". Module Type must be"
@@ -142,7 +142,7 @@ int run()
     rl->enable_history(sort(indices(LICENSES)));
     opt_license = prompt("License", "NONE");
 
-    if (!LICENSES[upper_case(opt_license)]) {
+    if (!LICENSES[upper_case(opt_license)] && opt_license != "NONE") {
       write("  <lr>Unknown license \"%s\".</lr>\n", opt_license);
       opt_license = 0;
     }
@@ -153,7 +153,6 @@ int run()
   }
   set_vars();
 
-  // rl->OutputController()->clear();
   write("\n\n  <bld>Are these settings correct?</bld>\n\n");
   write("  <g>Author:</g>      <br>%s</br>\n", vars->author);
   write("  <g>License:</g>     <br>%s</br>\n", vars->license || "None");
