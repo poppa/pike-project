@@ -1,3 +1,4 @@
 .pike-project-tmp
 generated_constants.h
 *~
+.DS_Store
