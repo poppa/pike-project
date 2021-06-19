@@ -40,7 +40,7 @@ string init_text = #"
 This utility program will help you set up a new Pike module.
 If you wish to abort this process at any time press ^C.
 
-Default values will be written in parentheses's <lb>(default value)</lb>.
+Default values will be written in parentheses <lb>(default value)</lb>.
 
 ";
 
@@ -185,7 +185,19 @@ int run()
 Regexp.PCRE.Widestring re_module_name =
   Regexp.PCRE.Widestring("^[_a-zA-Z]([_a-zA-Z0-9]+)?$");
 
-string tmpdir = ".pike-project-tmp";
+string tmpdir = combine_path(__DIR__, ".pike-project-tmp");
+
+string my_combine_path(mixed ... args) {
+  args = map(args, lambda (string s) {
+    if (has_prefix(s, "/")) {
+      s = s[1..];
+    }
+
+    return s;
+  });
+
+  return combine_path(tmpdir, @args);
+};
 
 string tmp_path(string file)
 {
@@ -203,26 +215,36 @@ void unpack()
   string root = lower_case(vars->type);
   tar = tar->cd(root);
 
-  void handle_files(object tar, string dir) {
+  string strip_root(string s) {
+    string prefix = "/" + root + "/";
+
+    if (has_prefix(s, prefix)) {
+      s = s[sizeof(prefix)..];
+    }
+
+    return s;
+  };
+
+  void handle_files(object tar) {
     array(string) files = tar->get_dir();
 
     foreach (files, string file) {
       object stat = tar->stat(file);
 
       if (stat->isdir) {
-        mkdir(combine_path(tmpdir, dir, file));
-        handle_files(tar->cd(file), dir + "/" + file);
+        mkdir(my_combine_path(strip_root(file)));
+        handle_files(tar->cd(file));
       }
       else {
         Stdio.File fp = tar->open(file, "r");
         string fdata = fp->read();
         fp->close();
-        Stdio.write_file(combine_path(tmpdir, dir, file), fdata);
+        Stdio.write_file(my_combine_path(strip_root(file)), fdata);
       }
     }
   };
 
-  handle_files(tar, ".");
+  handle_files(tar);
 
   destruct(tar);
   tar = 0;
@@ -385,6 +407,7 @@ string prompt(string message, void|string default_value)
 void on_signal(int s)
 {
   Stdio.recursive_rm(tmpdir);
+#endif
   werror("\n<lr>Exiting...</lr>\n\n");
   exit(s);
 }
@@ -472,5 +495,8 @@ constant PACKAGES = ([
   "PMOD": PACKAGE_PMOD
 ]);
 
-constant PACKAGE_CMOD = "eNrtWXtP40gM77/Mp/B2QWpRaZM+pVshJbTd0ttCqz72TgIUpcm0zZIm0SQBIdTvfp4kfaWwcNJRBBerYmY8HseJ419so81tvZB6WxKQarUKH8VaRdgcl5QSS2KpWhYqQrWYEkRRKBZTUEntgXzXUxlAyrEdR/2N3Ev7H5Q07n+Put4bvgSB/yuv8H+xKFSFGvd/rVZL/L9f/89Vw3of/5fFauj/Uk2slEro/2K1gv4XEv+/OX39UvBdVhgbVoFad+AYt5QQY+7YzIPDR3w5fJMuviHL8oC/IRk+UdlUy+Ffpj5kXI8Z1jTLeXdZ8kgA7pnh0Uz62hrODBfwd50+6sKRe52G8QNf4OzaurbSORQOaXWlfDjmQFHuKHMN2+JT1fdmNsuiGQATm1FVm0HGRRPRGt3QqJtZKchmcxCaBLfZQH9oDqQBjtGIP+Coyy8Nt7n1Va9ubwC1L8jn8++r4v8ieAx5Pn+r+K+Wy8/FvyhWysvvf60qiBj/JVEsJfG/Dzp8NDGALJcuCPlqWJrp6xTSU9Meq2Z+lkamb+l0Aj25/kNuNZWzUavf7HX7w/jGpXzRjPMGw377shXnDuX+U8KjfifO+tnsD9rdy03LNNuaGFNu2ZqHkESZw6i3zQ6De5vnMHvK1Pk2E/FCNU1bi3HvVNOPHbfHv6gWv4zqOAg3sesgjireg0Pdbf7YN0zPsJSJb2keoluwTUijWe/IfXmINzsgpNf+wdeDAYSBiah60L5sD8nBIyEH6KiD5t/r1SI8oFx0G6NOUwkE8YCq60oIhAo+M3zJLS+TXkIp4t+OQ3MgIAY+dy5C442DkXPCY5GBMVsCMx8jc/+P6PpR8F+9pRMDY+VtMsAX8F8oY823yv9q1QD/hQT/90LSHH2v3KnMUMcmdSXysycPz08ll2m6wSTSPftzcLpMlBRLnWOOZhOM70a7v+aj6IIzOa7HpIk8GnYb3boy6NcRnOK6NBJhRQ9Hvh+htoMjvo7L3U7je0duDU6laCKB1Gmf8aHOzwXzpWw9Eg12woVE6t3L7+2Wct6UG4hbuLm1loikP6BBhqZE1s2jkOA71KH4WbI0gz+fT4ZiQfyHH1WfvREAvBz/pVX814q8/1MqlcUk/vdBcj3IGDJXq2LoJgdXQl7kw+FjmC4sbrIEBTcyjEzA2A6izDI3y5KvuCn3W8pf7eE51mbmKqyCoM8FNd8VwMnJvYH6fe9kRyYqDAe+E5SiWPXBhoVX+ONHlZ1zpw/URWvJChZO02mygQR8yU0fjM4Gw8zGRjbG5WcDXnc07I2GmeU3Mvu5ACCI/23M/c87ga/v/4nFCscJnFbEpP/3Xv7fWO4F/8WysM7/BI7/VUEsJvi/D9qq/3nVCorSb8qdZXmnKIQUCl9AMqaWzSgxrBllxro3qDiqN1tI4UL6FspiuhSJJzXfR4j/5Yf7feo/UShj/SeWxVoV675qheO/gOJJ/O+BCscQBfLGS5AHaFGLMtWjOkyYPYfNCoF38TEvtGdU1SlD2eMCYsQxNDA/sih4NngzCqquM+q6cI94QWHsT4FRnsq5QS7n8X8NOKp2q04puJgCmjqMcUYtL8/1Pdt13L3QxDdN4Lkf2JMtvU8pChqPv9OhWjpEva7X6Is6nLsabZy6D/OxbfLbwwz2tRYuu6O7Kmc2anD4A4s/waf08Hbqro5/cWvL5muCkQkllFBCCSX02egfBlhuYw==";
-constant PACKAGE_PMOD = "eNrtWG1vmlAU9jO/4sy2iTZGoSIkW0yg6pybFWN1X2pDUK5K1Au5QJem8b/vXMRqF9d1ybRpd580vW/Hw4Fzn3N5CJa+W8ocFjJC1yu8VfSKvNtukFHKSllT5YqiqhlZUWRVzkAlcwTEYeQwgEzgB4HzjN2f1t8oAp7/iITRATdBkv/KC/Jf1i94X1aw0UX+j5v/pePR18m/qmjb/F8oPP+aVsmALPJ/cJx8KMUhK408WiL0DgJvTiTJWwY+i+D0ATdHvCCrTzhFI+A7JMc7DpuOC/ifOfe5MGIeneb53F1eepAAfjAvIrnskPZnXgj4N8yeWXAWDrMwuucD7A3pkGYLaLzG45WK67YAtn1HWOj5lHedOJr5LI9hAEx8RpzxDHIhhojRuN6YhLlHB/l8AdYhwTyf+F+HA1mAcwziI5xZ/NIwL2yvejO/BfS+kt5ffl/E/ytnTibeghQPUwE4xzV+rv+O/xcXW/5rGvK/rPD6L/h/eBhLzL195zDPGS1IaEjfu2b/S9UI2dj1mCFZl1+vq9KVVa+3etUNYWxcWvHJjnnV2M5SZ0lWkjnoW3WrZl/3anark/x20G7YXWz5eG1b5PsOt9tmtV3/3Dab11Uj7RhgtFuXvKnx3yX9jW0tNU1W1gNDqlmdz62m/aVh1hs9vvhkbEiGe4/heWM7jXWZbnm+QgJCXULHHr///6wGJPwf+3TiTWN2oALwJ/4rlZT/qiKXKzrnf1kV/D8KTE7SVj9383gY3hbgRi4qvDl9WJ+8q9u8hIYp/xL7ZOIpyXLrbVScJWvWoN8d9HOboyX/H56tb4b/T2vyP1eCf6H/cL7M+a/pmtB/r5X/neE/y/+z9V9Xt/nXuf7XZFXov6Pg9GGBAoqG+OImnXD1h3Kr1zDb9nes6C2rY9uSVCp9AMObUlReEtZ4fGCoATeqDKqQfTwnsp92DVIFxy3wQMG1xBG+a6W+3m9VfWP83xzcr6P/FBSAGUVRFV1D3adVeP2XNUXw/xgonUOqiHY2QRGgSShhTkRcmDB/CbsKgX/FQb77M+K4hKHteQlrxDnU8UWPEoh8iGYEHNdlJAzhx4wwAqN4Cozwr0oh/4KDFl4IgTOeO1MC4cyPFy6MsEdoVOT+TmJUZBPomrVvZrNhXw6avUbX6vX3XGgSLxbApSf4kyd+9znigvVZHw51YVO3XuDvut9rdZp7PPrYDe+XI3/Bb49FL46wb/Z+E+TMRw8Bf2C/PsF9fga99h4ff3Fr6QEgqrSAgICAgICAgICAgMC7wE/xtlfh";
+constant PACKAGE_CMOD = "eNrtWf9P4koQ91f3r5jjNCkGocgXk2dMWoVD3qEYvtx7iZqmtAv0KNtm22oM4X9/s21BKOo7kycvnp0Qdnd2djrtdD8zszWmjlnYeV+SZfm4UoGwrUatfFSO2pigWJarJbkql8pHIBePysfFHajsbIECz9c5muI6zA+8l+VQbDh8/SbFfSzbD0KG8P+lYwY2zYv+O/m/Wi6/6P9isVJO+L9cqZZ2QE79/+60N7MtgzKPzgn5ajHDDkwKmZHtDHQ7P84gM2AmHcK1ev5dbdS1s36jU79ud3rJiSv1sp7kdXud5lUjye2pneeE+51WkvWj3uk221erlhkOG1ojYdkTz2I+5S6n/jp7Gr3VazyXOyOuT9eZns9123aMBPdet4PEcmfwkxrJy+iua7GESa41oZr/6FJvnT8ILNu3mDYMmOFbDgunCanVz1tqR+3hzXYJuW5+F+NuF6KNSWZkt3nV7JHdGSG76Kjd+t9Po3m0QLts1/qtuhYK4gLdNDW8MbRMw2eGby/zpYym6YE/dngmt+nQHMjZkxfX3VPuob0rC2PnRMtiAxO2hGbOYnPn5KPsic9EIf771PPfMQl4e/wvlStyGv+35v8FqOYt9k7+fzX+y+jzZPwvFtP4vw0qHEAUJ7WVlyAP0KCMct2nJgy5M4VoMuAUZ2HwCBhGnDHVTcpR9qBACOqp0aHFKPgO+GMKGEc49Tx4GFNOYRCMgFPX4b4HQ4ejhOWBqxsTfUTBGzuBbcIAe5T5eaHvxaxj80LDwLaB6VMKznBN73OKwsTjNR06MyGOdb+iL85wNjU62PUepwPHFrfH/V+2cJEdbaocO6jBFQ8s+QSf0yPSqU0db7i1RfL1CYLgJ6YV/I929/bxXy5XSwn8r8hyJcX/bZB6HlYM0s3eLIoD87sc3Mj5omj2ZlG5ML/LEhRcqTCkkHHevvrWbGgXdbWGYCEtIkiWfMVJtdPQ/mr2LiQsMQ0tDjICBec5EHQDcHj4YKH+wD/ckIGIuoErgkaIeCsW3uBPLNU21p0+Ug+tJedorNZqnnVPM5locP6tpTbCoTC92z/r9qSViWyCK9aGvHa/d93vSZf6BJHUptnfCxDD/R9Xyi62iAD/eSXw9vy/UjpKz/+25//Fu/3/5P+I/5v5f1lO8X8bpEzR99q9zi19YFNPIT+u1d7FqeJxw7S4Qtpnf3ZPF8gbQWzeIQiQtWbniY+ic8EUmWtCmqj9XrvWRmztiFCT1GWQOKpcC9DF+XUsWsy2ahF6K3FHAUUANDZLsFYWsjHQKyvgrpD1UIWTa2OFKOYjGmQtg8k03hJihroUM2NmWOL5/Gb58HP4vzLcyv7HvZ/Y/8cICen+3watnf+LU2vQtE5dbS3KP03DKrLwBRRrxBxOicWwnrf8ZTKmubo/nivRQDmJZHG7xOJp9fgR9n94/jvV3yf6/3v+Vy5Wk/G/dJR+/9sKff1SCDxeGCDsU3YPAgEIsaZh0bUsuE6QxXwQb4gkOjofGTn85/qjFH0rygrefZbMCMAD4gOVMresJ06Y8Heb2W/DvnebESeHOMDeLbtlmRyJq7ynK+WjNgfLL06iG1Wh4jMTiEqQ6sYYJA9NRGtMhC9PWirIZnMQmQSTbKg/MgcyAAdoxB+w3xaXhknu6ao3kztA7ekXqpRSSukz0T8h2IrB";
+constant PACKAGE_PMOD = "eNrtWG1v2kAM7uf8Co+2ElQIQkmotAkpKVDGRgkKYV9KFQVygQi4oLukU1Xx3+dLgJaObqs22KbGQtyLHccXnx/7bjEP3OLRfkmW5QtVhbitJK18riTtiqCkyJWyXJHLyjnIpXNVrhyBenQAinjoMDRlEdAw4i/LoZjn/XiRYh2b9j+hhfB/SHi4x03wev+XlYqa+v9g/h8F1PPHhUnBp3vyf0VRXvR/SUafb/tfUc8x/uXU/3un4hngDohmxH6yCQoATUIJc0LigseCOSTMiBHkwvAenCgMJsRxCUPZs6IkoZ468XxKIAwgnBBwXJcRzuHrhDACw2gMjCwCFnLwAoYSPoeFM5o6YwJ8EkQzF4bYIzQsCH3HEXWJB1299llvNuzLftNsdA3T2vEiL5rNgDpzAoG3pXeXoo5+3fihDoe6cEcY9wP6K/p6ltnqNHdoDLDL7+fDYCaWx8JfttDSzReMnASoYSE+2PMvuEtP32zv0PGKpX1pmL2W0ZH+l52c0m/ifxLdh8d/uaQ+x38Vfyn+H4L0mt3qtKzszclDkgeWt3m4kQsl0Zw8IM4jei1vcxIKXhv1fruRyMcTNaNz1WraHxt6HcEiu84gMc/oW92+lb12pghAM5JLceTfjf/E8wXRRwT44yeB19f/armcnv8O5/91kP6d+h/L/+/rf7WU4v8hSJuj7+07h/nOcEa4Jn3p6tbHqsbZyPWZJhmXn3pVCZG/3jKr6xxhI2spJkWl+jgrStylpPcto27U7J4pUkv8rMgaXWzFeBtr1tx2/aqtN3tVbdXRQGu3LkVTE8/F/bVsbSUac5KBJm2nImRujTVJc+/RPH9kr2ydr7a84JAFwcqXjnyx/jeWp3bh/5PhQeK/dKE8i/+L+P4vjf/908nDzB8RyjFwpeOFPyVg22ZDb6+Pf7aNp8jiO9D8MQ0YkbDGwy9BQxRLakOoQmZTJ2Y+PBVYHzZRAgtK5MWKMNZWut5WpP3D8R/f/86d/WT/n9d/SqnyPP+XFTmN/0PQ8btixFlxiLBP6B0IBJAkfy5u6mBzJPyAUxjRYodkRcdh41Ee/5lzn+Uh8+k4J+buctKDBPCV+SHJZgbUEjdM+BtkTg045YOMuDnEAfYGdEAzeRROaPOmQtLmH9Ejv0GaHJoB4u6LOKMJZDmaiNa4CF88u1GQy+UhMQmmuVh/Yg5kAM7QiPdwaohXwzT/+Nab6S2g9mWKSCmllNIbom9pZnEa";
+#ifdef DEV
+  #include "generated_constants.h"
+#endif

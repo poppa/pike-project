@@ -61,7 +61,7 @@ string init_text = #"
 This utility program will help you set up a new Pike module.
 If you wish to abort this process at any time press ^C.
 
-Default values will be written in parentheses's <lb>(default value)</lb>.
+Default values will be written in parentheses <lb>(default value)</lb>.
 
 ";
 
@@ -218,7 +218,19 @@ int run()
 Regexp.PCRE.Widestring re_module_name =
   Regexp.PCRE.Widestring("^[_a-zA-Z]([_a-zA-Z0-9]+)?$");
 
-string tmpdir = ".pike-project-tmp";
+string tmpdir = combine_path(__DIR__, ".pike-project-tmp");
+
+string my_combine_path(mixed ... args) {
+  args = map(args, lambda (string s) {
+    if (has_prefix(s, "/")) {
+      s = s[1..];
+    }
+
+    return s;
+  });
+
+  return combine_path(tmpdir, @args);
+};
 
 string tmp_path(string file)
 {
@@ -236,26 +248,36 @@ void unpack()
   string root = lower_case(vars->type);
   tar = tar->cd(root);
 
-  void handle_files(object tar, string dir) {
+  string strip_root(string s) {
+    string prefix = "/" + root + "/";
+
+    if (has_prefix(s, prefix)) {
+      s = s[sizeof(prefix)..];
+    }
+
+    return s;
+  };
+
+  void handle_files(object tar) {
     array(string) files = tar->get_dir();
 
     foreach (files, string file) {
       object stat = tar->stat(file);
 
       if (stat->isdir) {
-        mkdir(combine_path(tmpdir, dir, file));
-        handle_files(tar->cd(file), dir + "/" + file);
+        mkdir(my_combine_path(strip_root(file)));
+        handle_files(tar->cd(file));
       }
       else {
         Stdio.File fp = tar->open(file, "r");
         string fdata = fp->read();
         fp->close();
-        Stdio.write_file(combine_path(tmpdir, dir, file), fdata);
+        Stdio.write_file(my_combine_path(strip_root(file)), fdata);
       }
     }
   };
 
-  handle_files(tar, ".");
+  handle_files(tar);
 
   destruct(tar);
   tar = 0;
@@ -423,7 +445,9 @@ string prompt(string message, void|string default_value)
 
 void on_signal(int s)
 {
+#ifndef KEEP_TMP
   Stdio.recursive_rm(tmpdir);
+#endif
   werror("\n<lr>Exiting...</lr>\n\n");
   exit(s);
 }
