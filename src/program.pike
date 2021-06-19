@@ -445,9 +445,7 @@ string prompt(string message, void|string default_value)
 
 void on_signal(int s)
 {
-#ifndef KEEP_TMP
   Stdio.recursive_rm(tmpdir);
-#endif
   werror("\n<lr>Exiting...</lr>\n\n");
   exit(s);
 }
