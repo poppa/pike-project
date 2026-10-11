@@ -1,5 +1,3 @@
-Linguagem de Programação Chamada Pike.
-
 # pike-project
 This is a console program that generates [Pike](https://pike.lysator.liu.se) module skeletons for both `CMOD`s (modules written in C) or `PMOD`s (modules written in Pike) which then can be installed via `pike -x module && pike -x module install`.
 
